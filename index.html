@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sighting</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,400;1,9..144,500&family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,600;0,6..12,700;1,6..12,400&display=swap">
+<style>
+/* Layout: a field-guide page. Dark forest ground, procedurally drawn foliage framing the corners,
+   one paper "specimen" card holding the photo; controls sit on the forest around it. Single-theme by design. */
+:root{
+  --forest:#0e241d;      /* night canopy */
+  --forest-2:#163a2f;    /* mid ground */
+  --leaf:#2f6b4a;        /* foliage */
+  --leaf-2:#8fb35a;      /* lit leaf */
+  --mint:#b9d4b0;        /* muted text on dark */
+  --ochre:#d9a630;       /* primary accent */
+  --ember:#e2762e;       /* secondary accent */
+  --paper:#f4eedc;       /* specimen card */
+  --paper-2:#e8e0c8;     /* card rules */
+  --ink:#1b2a24;         /* text on paper */
+  --ink-muted:#5b6b62;
+  --display:"Fraunces",Georgia,"Times New Roman",serif;
+  --body:"Nunito Sans","Helvetica Neue",Arial,sans-serif;
+  --radius:18px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--forest);color:var(--mint);font-family:var(--body);font-size:16px;line-height:1.5}
+#foliage{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+#grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.14;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.wrap{position:relative;z-index:2;max-width:720px;margin:0 auto;padding-inline:16px;padding-block:22px 48px;display:flex;flex-direction:column;gap:22px}
+
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+header,.note,section h2,.clock{text-shadow:0 1px 0 var(--forest),0 0 14px var(--forest),0 0 28px var(--forest)}
+.brand{display:flex;flex-direction:column;gap:2px}
+.brand .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ochre);font-weight:700}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,8vw,48px);letter-spacing:-.02em;margin:0;line-height:.95;color:var(--paper);text-wrap:balance}
+h1 em{font-style:italic;font-weight:400;color:var(--ochre)}
+.count{font-size:13px;color:var(--mint);opacity:.8}
+
+/* specimen card */
+.card{background:var(--paper);color:var(--ink);border-radius:var(--radius);overflow:hidden;
+  box-shadow:0 30px 60px -30px rgba(0,0,0,.8),0 0 0 1px rgba(0,0,0,.25)}
+.photo{position:relative;background:var(--forest-2);aspect-ratio:4/3;max-width:100%;display:grid;place-items:center;overflow:hidden}
+.photo img{width:100%;height:100%;object-fit:contain;display:block;background:#0b1a15}
+.photo .empty{padding:28px;text-align:center;color:var(--mint);max-width:34ch}
+.photo .empty b{display:block;font-family:var(--display);font-style:italic;font-weight:500;font-size:26px;color:var(--paper);margin-bottom:8px}
+.spin{width:38px;height:38px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--ochre);border-radius:50%;animation:s 1s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+.meta{padding:16px 18px 18px;display:grid;grid-template-columns:1fr auto;gap:4px 14px;align-items:start}
+.meta .feat{grid-column:1/-1;font-family:var(--display);font-style:italic;font-weight:400;font-size:15px;color:var(--ember)}
+.meta .name{font-family:var(--display);font-weight:700;font-size:clamp(26px,6vw,36px);line-height:1;letter-spacing:-.015em;min-width:0}
+.meta .sci{font-style:italic;color:var(--ink-muted);font-size:15px}
+.meta .cat{grid-column:2;grid-row:2/4;font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:6px 10px;border-radius:999px;background:var(--forest);color:var(--ochre);font-weight:700;white-space:nowrap}
+.palette{grid-column:1/-1;display:flex;gap:6px;margin-top:10px}
+.palette button{flex:1 1 0;height:30px;border-radius:7px;border:1px solid rgba(0,0,0,.15);padding:0;min-height:0;cursor:copy;position:relative}
+.palette button span{position:absolute;inset:auto 0 -16px;font-size:10px;color:var(--ink-muted);text-align:center;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.palette.has-labels{margin-bottom:16px}
+.meta .credit{grid-column:1/-1;font-size:12px;color:var(--ink-muted);border-top:1px solid var(--paper-2);padding-top:10px;margin-top:6px;overflow-wrap:anywhere;font-style:italic}
+.meta .credit a{color:var(--leaf)}
+
+/* controls */
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+button{font:inherit;cursor:pointer;border-radius:999px;border:1px solid rgba(185,212,176,.35);background:transparent;color:var(--paper);padding:12px 18px;font-weight:700;min-height:44px}
+button:focus-visible{outline:3px solid var(--ochre);outline-offset:2px}
+button.primary{background:var(--ochre);color:var(--forest);border-color:var(--ochre);flex:1 1 200px;font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:-.01em}
+button.primary:hover{background:#e6b640}
+button.primary:disabled{opacity:.6;cursor:wait}
+button.small{padding:8px 13px;font-size:14px;min-height:36px}
+button[aria-pressed="true"]{background:var(--leaf-2);color:var(--forest);border-color:var(--leaf-2)}
+
+section h2{font-family:var(--display);font-style:italic;font-weight:400;font-size:17px;color:var(--ochre);margin:0 0 10px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.timer{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.clock{font-family:var(--display);font-weight:700;font-size:38px;font-variant-numeric:tabular-nums;min-width:4.2ch;line-height:1;color:var(--paper)}
+.clock.over{color:var(--ember)}
+.bar{height:6px;background:rgba(185,212,176,.18);border-radius:3px;overflow:hidden;flex:1 1 100%}
+.bar i{display:block;height:100%;width:0;background:var(--ochre);transition:width 1s linear}
+.hist{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scroll-snap-type:x mandatory}
+.hist button{padding:0;border-radius:12px;overflow:hidden;width:76px;height:76px;flex:0 0 auto;scroll-snap-align:start;min-height:0;border-color:rgba(244,238,220,.25)}
+.hist img{width:100%;height:100%;object-fit:cover;display:block}
+.note{font-size:13px;color:var(--mint);max-width:60ch;background:rgba(14,36,29,.82);padding:10px 14px;border-radius:12px;align-self:flex-start}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}.bar i{transition:none}}
+</style>
+</head>
+<body>
+<canvas id="foliage" aria-hidden="true"></canvas>
+<div id="grain" aria-hidden="true"></div>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="eyebrow">Field notes for the sketchbook</div>
+      <h1>Sight<em>ing</em></h1>
+    </div>
+    <div class="count" id="deckCount"></div>
+  </header>
+
+  <div class="card">
+    <div class="photo" id="photo">
+      <div class="empty"><b>Something's out there.</b>Tap New sighting for a random animal and a real reference photo from iNaturalist's open-licensed library.</div>
+    </div>
+    <div class="meta" id="meta" hidden>
+      <div class="feat">Featured creature</div>
+      <div class="name" id="name"></div>
+      <div class="sci" id="sci"></div>
+      <div class="cat" id="cat"></div>
+      <div class="palette" id="palette" hidden></div>
+      <div class="credit" id="credit"></div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="primary" id="draw">New sighting</button>
+    <button id="another" hidden>Another photo</button>
+    <button id="open" hidden>View observation</button>
+  </div>
+
+  <section>
+    <h2>In the deck</h2>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <section>
+    <h2>Sketch timer</h2>
+    <div class="timer">
+      <div class="clock" id="clock">–:––</div>
+      <button class="small" data-min="2">2 min</button>
+      <button class="small" data-min="5">5 min</button>
+      <button class="small" data-min="10">10 min</button>
+      <button class="small" data-min="20">20 min</button>
+      <button class="small" id="stop" hidden>Stop</button>
+      <div class="bar"><i id="barFill"></i></div>
+    </div>
+  </section>
+
+  <section id="histSec" hidden>
+    <h2>Recent sightings</h2>
+    <div class="hist" id="hist"></div>
+  </section>
+
+  <p class="note">Photos are pulled live from the iNaturalist community (research-grade observations with CC0, CC BY, CC BY-NC or CC BY-SA licenses). Credit the photographer if you post a study.</p>
+</div>
+
+<script>
+// ---------- Foliage: procedural leaves on a canvas, with a breeze, parallax, and touch response ----------
+(function(){
+  const cv=document.getElementById("foliage"), ctx=cv.getContext("2d");
+  const P=["#163a2f","#1d4a3a","#2f6b4a","#3f7f52","#8fb35a"];
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let seed=7; const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
+  let W=0,H=0, plants=[], pointer={x:-9999,y:-9999,vx:0,vy:0,t:0}, gust=0, scrollV=0, lastScroll=scrollY;
+
+  // ---- shape drawers: each draws from its base at (0,0) along +y, already rotated/bent by the caller ----
+  function leafShape(len,w,col,alpha){
+    ctx.globalAlpha=alpha;ctx.fillStyle=col;
+    ctx.beginPath();ctx.moveTo(0,0);
+    ctx.bezierCurveTo(w,len*.25,w,len*.75,0,len);
+    ctx.bezierCurveTo(-w,len*.75,-w,len*.25,0,0);ctx.fill();
+    ctx.strokeStyle="rgba(14,36,29,.45)";ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.moveTo(0,len*.08);ctx.lineTo(0,len*.95);ctx.stroke();
+    for(let i=.2;i<.9;i+=.14){ctx.beginPath();ctx.moveTo(0,len*i);ctx.lineTo(w*.55,len*(i+.09));ctx.moveTo(0,len*i);ctx.lineTo(-w*.55,len*(i+.09));ctx.stroke();}
+  }
+  function monsteraShape(len,w,col,alpha){
+    leafShape(len,w,col,alpha);
+    ctx.save();ctx.globalCompositeOperation="destination-out";
+    for(let i=.3;i<.85;i+=.18){const hw=w*.22;
+      ctx.beginPath();ctx.ellipse(w*.42,len*i,hw,hw*1.8,0,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(-w*.42,len*(i+.09),hw,hw*1.8,0,0,Math.PI*2);ctx.fill();}
+    ctx.restore();
+  }
+  function fernShape(len,w,col,alpha){
+    ctx.globalAlpha=alpha;ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,len);ctx.stroke();
+    for(let i=.08;i<.98;i+=.07){const s=1-i*.8, l=len*.11*s;
+      [1,-1].forEach(d=>{ctx.beginPath();ctx.ellipse(d*l*.5,len*i,l*.5,l*.18,d*.6,0,Math.PI*2);ctx.fill();});}
+  }
+  function palmShape(len,w,col,alpha,bend){
+    for(let a=-1;a<=1;a+=.25){ ctx.save();ctx.rotate(a*.9+bend*a*.3);leafShape(len*(1-Math.abs(a)*.35),len*.08,col,alpha);ctx.restore(); }
+  }
+  const SHAPES={leaf:leafShape,monstera:monsteraShape,fern:fernShape,palm:palmShape};
+
+  // ---- plant model ----
+  function add(kind,x,y,len,w,rot,col,alpha,depth){
+    plants.push({kind,x,y,len,w,rot,col,alpha,depth,
+      phase:rnd()*Math.PI*2, speed:.6+rnd()*.7, amp:.03+rnd()*.04,  // idle breeze
+      bend:0, vel:0, stiff:.08+rnd()*.06, damp:.86+rnd()*.06});       // spring state
+  }
+  function cluster(cx,cy,toward,scale,count){
+    const spread=Math.min(W*.16,110);
+    for(let i=0;i<count;i++){
+      const t=rnd(), kind=rnd(), col=P[Math.floor(rnd()*P.length)];
+      const rot=toward+(t-.5)*1.6, len=scale*(70+rnd()*110), alpha=.7+rnd()*.3, depth=.4+rnd()*.6;
+      const x=cx+(rnd()-.5)*spread, y=cy+(rnd()-.5)*spread;
+      if(kind<.3) add("monstera",x,y,len*1.3,len*.45,rot,col,alpha,depth);
+      else if(kind<.55) add("fern",x,y,len*1.2,0,rot,rnd()<.5?"#8fb35a":"#3f7f52",alpha,depth);
+      else if(kind<.7) add("palm",x,y,len*.9,0,rot,col,alpha,depth);
+      else add("leaf",x,y,len,len*.3,rot,col,alpha,depth);
+    }
+    add("leaf",cx+(rnd()-.5)*40,cy+(rnd()-.5)*40,scale*80,scale*22,toward+(rnd()-.5),rnd()<.5?"#d9a630":"#e2762e",.9,1);
+  }
+  function build(){
+    const dpr=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight;
+    cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+    seed=7; plants=[]; const s=Math.max(.8,Math.min(1.4,W/800));
+    cluster(0,0,-Math.PI/4,s,10); cluster(W,0,Math.PI/4,s,10);
+    cluster(0,H,-Math.PI*.75,s,8); cluster(W,H,Math.PI*.75,s,8);
+    for(let x=W*.2;x<W*.85;x+=W*.16) add("fern",x,H+6,s*(110+rnd()*70),0,Math.PI+(rnd()-.5)*.5,rnd()<.5?"#2f6b4a":"#1d4a3a",.9,.3+rnd()*.4);
+    // far leaves draw first
+    plants.sort((a,b)=>a.depth-b.depth);
+  }
+
+  // ---- simulation ----
+  function step(now){
+    const t=now/1000;
+    const px=pointer.x, py=pointer.y, pointerFresh=(now-pointer.t)<1500;
+    for(const p of plants){
+      // where this leaf's tip roughly is, including parallax
+      const par=scrollY*p.depth*.12;
+      const bx=p.x, by=p.y-par;
+      const tipx=bx-Math.sin(p.rot+p.bend)*p.len*.6, tipy=by+Math.cos(p.rot+p.bend)*p.len*.6;
+      let target=0;
+      if(pointerFresh){
+        const dx=tipx-px, dy=tipy-py, d=Math.hypot(dx,dy), R=150+p.len*.4;
+        if(d<R){
+          // push the tip away from the pointer, scaled by how fast the pointer is moving
+          const side=Math.sign((dx)*Math.cos(p.rot)+(dy)*Math.sin(p.rot)) || 1;
+          const speed=Math.min(1,Math.hypot(pointer.vx,pointer.vy)/18);
+          target += side*(1-d/R)*(.25+.45*speed);
+        }
+      }
+      target += gust*Math.sin(t*9+p.phase)*(.6+p.depth*.4);   // gust ripples through, near leaves more
+      target += scrollV*p.depth*.004;                          // scroll drag
+      // spring toward target
+      p.vel += (target-p.bend)*p.stiff; p.vel*=p.damp; p.bend+=p.vel;
+    }
+    gust*=.93; scrollV*=.85;
+  }
+  function draw(now){
+    const t=now/1000;
+    ctx.clearRect(0,0,W,H);
+    for(const p of plants){
+      const idle=reduce?0:Math.sin(t*p.speed+p.phase)*p.amp;
+      const par=reduce?0:scrollY*p.depth*.12;
+      ctx.save();ctx.translate(p.x,p.y-par);ctx.rotate(p.rot+p.bend+idle);
+      // bend the blade: shear the upper part so the tip leads the motion
+      ctx.transform(1,0,(p.bend+idle)*.6,1,0,0);
+      SHAPES[p.kind](p.len,p.w,p.col,p.alpha,p.bend);
+      ctx.restore();
+    }
+    ctx.globalAlpha=.9;ctx.fillStyle="#f4eedc";ctx.beginPath();ctx.arc(W-44,30-scrollY*.05,12,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#0e241d";ctx.beginPath();ctx.arc(W-38,25-scrollY*.05,11,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+  }
+  let running=false;
+  function loop(now){ if(!running) return; step(now); draw(now); requestAnimationFrame(loop); }
+  function start(){ if(running||reduce) return; running=true; requestAnimationFrame(loop); }
+  document.addEventListener("visibilitychange",()=>{ if(document.hidden){running=false;} else start(); });
+
+  // ---- inputs ----
+  function onMove(x,y){ const now=performance.now(); if(pointer.t){ pointer.vx=x-pointer.x; pointer.vy=y-pointer.y; } pointer.x=x;pointer.y=y;pointer.t=now; }
+  addEventListener("pointermove",e=>onMove(e.clientX,e.clientY),{passive:true});
+  addEventListener("touchmove",e=>{const t=e.touches[0]; if(t) onMove(t.clientX,t.clientY);},{passive:true});
+  addEventListener("touchstart",e=>{const t=e.touches[0]; if(t){pointer.x=t.clientX;pointer.y=t.clientY;pointer.vx=pointer.vy=0;pointer.t=performance.now();}},{passive:true});
+  addEventListener("scroll",()=>{ scrollV+= (scrollY-lastScroll); lastScroll=scrollY; },{passive:true});
+  addEventListener("deviceorientation",e=>{ if(e.gamma!=null) gust=Math.max(gust,Math.min(.25,Math.abs(e.gamma)/400)); },{passive:true});
+  window.rustle = (strength=1)=>{ gust=Math.max(gust,.35*strength); };   // the app calls this on New sighting
+
+  let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{build();if(reduce)draw(0);},120);});
+  build(); if(reduce) draw(0); else start();
+})();
+
+// ---------- The deck ----------
+const DECK = [
+ ["Red Fox","mammal"],["Gray Wolf","mammal"],["Coyote","mammal"],["Bobcat","mammal"],["Cougar","mammal"],
+ ["Snow Leopard","mammal"],["Cheetah","mammal"],["Lion","mammal"],["Tiger","mammal"],["Jaguar","mammal"],
+ ["Brown Bear","mammal"],["Polar Bear","mammal"],["Giant Panda","mammal"],["Raccoon","mammal"],["Striped Skunk","mammal"],
+ ["North American River Otter","mammal"],["Sea Otter","mammal"],["American Bison","mammal"],["Moose","mammal"],["Elk","mammal"],
+ ["Pronghorn","mammal"],["Bighorn Sheep","mammal"],["Giraffe","mammal"],["Plains Zebra","mammal"],["African Bush Elephant","mammal"],
+ ["Hippopotamus","mammal"],["White Rhinoceros","mammal"],["Okapi","mammal"],["Red Kangaroo","mammal"],["Koala","mammal"],
+ ["Nine-banded Armadillo","mammal"],["Brown-throated Sloth","mammal"],["Ring-tailed Lemur","mammal"],["Mandrill","mammal"],["Western Gorilla","mammal"],
+ ["Orangutan","mammal"],["Capybara","mammal"],["Eastern Gray Squirrel","mammal"],["Meerkat","mammal"],["Fennec Fox","mammal"],
+ ["Wild Boar","mammal"],["Warthog","mammal"],["Domestic Horse","mammal"],["Highland Cattle","mammal"],["Humpback Whale","mammal"],
+ ["Common Bottlenose Dolphin","mammal"],["Walrus","mammal"],["Harbor Seal","mammal"],["Vampire Bat","mammal"],["Duck-billed Platypus","mammal"],
+ ["Bald Eagle","bird"],["Great Horned Owl","bird"],["Barn Owl","bird"],["Peregrine Falcon","bird"],["Red-tailed Hawk","bird"],
+ ["Great Blue Heron","bird"],["Sandhill Crane","bird"],["American Flamingo","bird"],["Roseate Spoonbill","bird"],["Brown Pelican","bird"],
+ ["Wood Duck","bird"],["Mallard","bird"],["Mute Swan","bird"],["Canada Goose","bird"],["Wild Turkey","bird"],
+ ["Northern Cardinal","bird"],["Blue Jay","bird"],["Painted Bunting","bird"],["Ruby-throated Hummingbird","bird"],["Pileated Woodpecker","bird"],
+ ["Common Raven","bird"],["Secretarybird","bird"],["Shoebill","bird"],["Toco Toucan","bird"],["Scarlet Macaw","bird"],
+ ["Atlantic Puffin","bird"],["Emperor Penguin","bird"],["Ostrich","bird"],["Southern Cassowary","bird"],["Indian Peafowl","bird"],
+ ["American Alligator","reptile"],["Komodo Dragon","reptile"],["Green Iguana","reptile"],["Panther Chameleon","reptile"],["Leopard Gecko","reptile"],
+ ["Gila Monster","reptile"],["Texas Horned Lizard","reptile"],["Western Diamondback Rattlesnake","reptile"],["Ball Python","reptile"],["Green Sea Turtle","reptile"],
+ ["Galápagos Tortoise","reptile"],["Red-eared Slider","reptile"],["Cuvier's Dwarf Caiman","reptile"],
+ ["Red-eyed Tree Frog","amphibian"],["Poison Dart Frogs","amphibian"],["American Bullfrog","amphibian"],
+ ["Axolotl","amphibian"],["Eastern Newt","amphibian"],["Fire Salamander","amphibian"],
+ ["Great White Shark","sea"],["Whale Shark","sea"],["Giant Manta Ray","sea"],["Clownfish","sea"],["Lionfish","sea"],
+ ["Ocean Sunfish","sea"],["Common Seahorse","sea"],["Giant Pacific Octopus","sea"],["Common Cuttlefish","sea"],["Moon Jellyfish","sea"],
+ ["Betta Fish","sea"],["Koi","sea"],["Leafy Seadragon","sea"],["Nudibranchs","sea"],["Sea Stars","sea"],
+ ["Monarch Butterfly","bug"],["Blue Morpho","bug"],["Praying Mantises","bug"],["Rhinoceros Beetles","bug"],["Jumping Spiders","bug"],
+ ["Honey Bee","bug"],["Dragonflies","bug"],["Luna Moth","bug"],["Green Stink Bug","bug"],["Ladybugs","bug"]
+];
+const CATS = {mammal:"Mammals",bird:"Birds",reptile:"Reptiles",amphibian:"Amphibians",sea:"Sea life",bug:"Insects & bugs"};
+const LICENSES = "cc0,cc-by,cc-by-nc,cc-by-sa,cc-by-nc-sa";
+const $ = id => document.getElementById(id);
+let active = new Set(Object.keys(CATS));
+let current = null, history = [];
+try{ const s = JSON.parse(localStorage.getItem("sighting")||"{}"); if(s.active) active = new Set(s.active); }catch(e){}
+function save(){ try{ localStorage.setItem("sighting", JSON.stringify({active:[...active]})); }catch(e){} }
+
+function renderChips(){
+  $("chips").innerHTML = "";
+  for(const [k,label] of Object.entries(CATS)){
+    const b = document.createElement("button");
+    b.className="small"; b.textContent=label; b.id="chip-"+k;
+    b.setAttribute("aria-pressed", active.has(k));
+    b.onclick=()=>{ if(active.has(k)){ if(active.size>1) active.delete(k);} else active.add(k); save(); renderChips(); };
+    $("chips").appendChild(b);
+  }
+  $("deckCount").textContent = DECK.filter(d=>active.has(d[1])).length+" species in the deck";
+}
+renderChips();
+
+// ---------- iNaturalist ----------
+async function fetchObservations(name, page){
+  const url = "https://api.inaturalist.org/v1/observations?taxon_name="+encodeURIComponent(name)
+    +"&photos=true&photo_license="+LICENSES+"&quality_grade=research&per_page=30&order_by=votes&page="+page;
+  const r = await fetch(url);
+  if(!r.ok) throw new Error("iNaturalist returned "+r.status);
+  const j = await r.json();
+  const obs = (j.results||[]).filter(o=>o.photos && o.photos.length && o.taxon);
+  if(!obs.length && page>1) return fetchObservations(name, 1);
+  return obs;
+}
+const bigUrl = u => u.replace(/\/(square|small|medium|thumb)\./, "/large.");
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function showLoading(){ $("photo").innerHTML = '<div class="spin" aria-label="Loading"></div>'; $("draw").disabled = true; }
+function showError(msg){
+  $("photo").innerHTML = '<div class="empty"><b>Nothing in the viewfinder.</b>'+msg+'</div>';
+  $("draw").disabled = false;
+}
+
+// ---------- Palette: pull 6 colors from the photo ----------
+function extractPalette(src){
+  $("palette").hidden = true; $("palette").innerHTML = "";
+  const im = new Image(); im.crossOrigin = "anonymous";
+  im.onload = ()=>{
+    try{
+      const c=document.createElement("canvas"), x=c.getContext("2d"); c.width=48; c.height=48;
+      x.drawImage(im,0,0,48,48);
+      const d=x.getImageData(0,0,48,48).data, buckets={};
+      for(let i=0;i<d.length;i+=4){
+        const k=[d[i]>>4,d[i+1]>>4,d[i+2]>>4].join(",");
+        (buckets[k] ||= {n:0,r:0,g:0,b:0}); const b=buckets[k]; b.n++; b.r+=d[i]; b.g+=d[i+1]; b.b+=d[i+2];
+      }
+      const cols=Object.values(buckets).map(b=>({n:b.n,r:b.r/b.n,g:b.g/b.n,b:b.b/b.n})).sort((a,b)=>b.n-a.n);
+      const picked=[];
+      for(const c of cols){ if(picked.every(p=>Math.hypot(p.r-c.r,p.g-c.g,p.b-c.b)>48)) picked.push(c); if(picked.length===6) break; }
+      picked.sort((a,b)=>(a.r+a.g+a.b)-(b.r+b.g+b.b));
+      const hex=c=>"#"+[c.r,c.g,c.b].map(v=>Math.round(v).toString(16).padStart(2,"0")).join("");
+      for(const c of picked){
+        const h=hex(c), b=document.createElement("button"); b.style.background=h; b.title="Copy "+h;
+        b.innerHTML='<span>'+h+'</span>';
+        b.onclick=()=>{ navigator.clipboard?.writeText(h).catch(()=>{}); b.firstChild.textContent="copied"; setTimeout(()=>b.firstChild.textContent=h,900); };
+        $("palette").appendChild(b);
+      }
+      $("palette").classList.add("has-labels"); $("palette").hidden = picked.length<3;
+    }catch(e){ /* canvas tainted (no CORS): skip the palette quietly */ }
+  };
+  im.src = src;
+}
+
+function render(){
+  const o = current.obs[current.idx];
+  const p = o.photos[Math.floor(Math.random()*o.photos.length)];
+  const src = bigUrl(p.url);
+  const img = new Image(); img.alt = current.name+" reference photo";
+  img.onload = ()=>{ $("photo").innerHTML=""; $("photo").appendChild(img); $("draw").disabled=false; extractPalette(src); };
+  img.onerror = ()=> showError("The image did not load. Try another photo.");
+  img.src = src;
+
+  $("name").textContent = o.taxon.preferred_common_name || current.name;
+  $("sci").textContent = o.taxon.name || "";
+  $("cat").textContent = CATS[current.cat];
+  const who = (p.attribution||"").replace(/^\(c\)\s*/,"© ");
+  $("credit").innerHTML = "Photo "+escapeHtml(who)+(o.place_guess? " · "+escapeHtml(o.place_guess):"")+
+    ' · <a href="https://www.inaturalist.org/observations/'+o.id+'" target="_blank" rel="noopener">iNaturalist</a>';
+  $("meta").hidden = false;
+  $("another").hidden = current.obs.length<2;
+  $("open").hidden = false;
+  $("open").onclick = ()=> window.open("https://www.inaturalist.org/observations/"+o.id, "_blank", "noopener");
+
+  history = [{name:current.name, thumb:p.url, id:o.id}, ...history.filter(h=>h.id!==o.id)].slice(0,12);
+  renderHistory();
+}
+function renderHistory(){
+  $("histSec").hidden = !history.length; $("hist").innerHTML = "";
+  for(const h of history){
+    const b=document.createElement("button"); b.title=h.name;
+    b.innerHTML='<img alt="'+escapeHtml(h.name)+'" src="'+h.thumb.replace("/square.","/medium.")+'">';
+    b.onclick=()=>pull(DECK.find(d=>d[0]===h.name));
+    $("hist").appendChild(b);
+  }
+}
+async function pull(card){
+  if(!card){
+    const pool = DECK.filter(d=>active.has(d[1]) && !(current && d[0]===current.name));
+    card = pool[Math.floor(Math.random()*pool.length)];
+  }
+  showLoading(); $("meta").hidden = true; $("another").hidden = true; $("open").hidden = true;
+  try{
+    const obs = await fetchObservations(card[0], 1+Math.floor(Math.random()*3));
+    if(!obs.length) return showError("iNaturalist had no open-licensed photos for "+card[0]+". Try again.");
+    current = {name:card[0], cat:card[1], obs, idx:Math.floor(Math.random()*obs.length)};
+    render();
+  }catch(e){ showError("Could not reach iNaturalist. Check your connection and try again."); }
+}
+$("draw").onclick = ()=>{ window.rustle?.(1); pull(); };
+$("another").onclick = ()=>{ if(!current) return; let i; do{ i=Math.floor(Math.random()*current.obs.length);}while(current.obs.length>1 && i===current.idx); current.idx=i; showLoading(); render(); };
+
+// ---------- Timer ----------
+let tHandle=null, tTotal=0, tLeft=0;
+const fmt = s => Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+function tick(){
+  tLeft--; $("clock").textContent=fmt(Math.max(tLeft,0)); $("barFill").style.width=(100*(1-tLeft/tTotal))+"%";
+  if(tLeft<=0){ clearInterval(tHandle); tHandle=null; $("clock").classList.add("over"); $("clock").textContent="Done"; $("stop").hidden=true; beep(); }
+}
+function startTimer(min){
+  clearInterval(tHandle); tTotal=tLeft=min*60;
+  $("clock").classList.remove("over"); $("clock").textContent=fmt(tLeft); $("barFill").style.width="0%"; $("stop").hidden=false;
+  tHandle=setInterval(tick,1000);
+}
+function beep(){ try{ const a=new (window.AudioContext||window.webkitAudioContext)(); const o=a.createOscillator(), g=a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value=660; g.gain.value=.15; o.start(); o.stop(a.currentTime+.35); }catch(e){} }
+document.querySelectorAll("[data-min]").forEach(b=>b.onclick=()=>startTimer(+b.dataset.min));
+$("stop").onclick=()=>{ clearInterval(tHandle); tHandle=null; $("stop").hidden=true; $("clock").textContent="–:––"; $("barFill").style.width="0%"; };
+</script>
+</body>
+</html>
